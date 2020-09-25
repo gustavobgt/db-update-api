@@ -8,16 +8,26 @@ dotenv.config();
 
 const readFile = promises.readFile;
 
-const PATH = './src/data/';
+const PATH = './src/data';
 
-global.fileName = `${PATH}dados_NBS.json`;
+/**
+ * Global Variables
+ */
 
-async function convertExcelToJson() {
+// Excel files
+global.EXCEL_SALES = `${PATH}/SALES.xlsx`;
+global.EXCEL_FINANCES = `${PATH}/FINANCES.xls`;
+
+// Json files
+global.JSON_SALES = `${PATH}/json/SALES.json`;
+global.JSON_FINANCES = `${PATH}/json/FINANCES.json`;
+
+async function convertExcelToJson(excelFileName, jsonFileName) {
   try {
     xlsxj(
       {
-        input: `${PATH}dados_NBS.xlsx`,
-        output: `${PATH}dados_NBS.json`,
+        input: excelFileName,
+        output: jsonFileName,
       },
       (err, _) => {
         if (err) {
@@ -27,6 +37,18 @@ async function convertExcelToJson() {
         }
       }
     );
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+async function convertion(excelFileName, jsonFileName) {
+  try {
+    await convertExcelToJson(excelFileName, jsonFileName);
+
+    const data = await readFile(jsonFileName, 'utf8');
+
+    return JSON.parse(data);
   } catch (err) {
     console.log(err);
   }
@@ -65,20 +87,28 @@ console.log('Starting MongoDB Connection...');
     console.log('Connected to MongoDB');
 
     console.log('Sarting update routine...');
+
     setInterval(function () {
       (async () => {
         try {
-          await convertExcelToJson();
+          const {
+            EXCEL_SALES,
+            JSON_SALES,
+            EXCEL_FINANCES,
+            JSON_FINANCES,
+          } = global;
 
-          const data = await readFile(global.fileName, 'utf8');
-          const json = JSON.parse(data);
+          const sales = await convertion(EXCEL_SALES, JSON_SALES);
+          const finances = await convertion(EXCEL_FINANCES, JSON_FINANCES);
 
-          updateDataBase(json);
+          console.log(finances);
+
+          // updateDataBase(sales);
         } catch (err) {
           console.log(err);
         }
       })();
-    }, 10000);
+    }, 5000);
   } catch (err) {
     console.log(`Error Connecting MongoDB - ${err}`);
   }
